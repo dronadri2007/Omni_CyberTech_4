@@ -7,13 +7,19 @@ export const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const [formError, setFormError] = useState<string | null>(null);
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(email || 'investigator@veriframe.io', 'analyst');
-    navigate('/dashboard');
+    setFormError(null);
+    try {
+      await register(name, email, password);
+      navigate('/dashboard');
+    } catch (err) {
+      setFormError((err as Error).message);
+    }
   };
 
   return (
@@ -26,6 +32,12 @@ export const RegisterPage: React.FC = () => {
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 font-mono">CREATE VERIFRAME ACCOUNT</h2>
           <p className="text-xs text-slate-500 font-semibold">Deploy your team's media verification node</p>
         </div>
+
+        {formError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-mono rounded-lg px-3 py-2 text-center">
+            {formError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 font-mono">
           <div className="space-y-1">
