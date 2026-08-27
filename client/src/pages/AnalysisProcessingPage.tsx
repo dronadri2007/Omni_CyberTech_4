@@ -5,11 +5,11 @@ import { Cpu, CheckCircle2, Loader2, ArrowRight, ShieldAlert, Sparkles, Activity
 const STAGES = [
   { id: 1, title: 'Step 1 — Ingest', desc: 'Uploading & validating media stream container...' },
   { id: 2, title: 'Step 2 — Extract', desc: 'Extracting keyframes, audio tracks & EXIF metadata...' },
-  { id: 3, title: 'Step 3 — Face Analysis', desc: 'Checking facial forgery & spatial landmark density...' },
-  { id: 4, title: 'Step 4 — Temporal Analysis', desc: 'Checking frame-to-frame optical flow consistency...' },
+  { id: 3, title: 'Step 3 — Face Analysis', desc: 'Error-Level Analysis: recompression residue by region...' },
+  { id: 4, title: 'Step 4 — Temporal Analysis', desc: 'Noise-floor & smoothness statistics vs. sensor capture...' },
   { id: 5, title: 'Step 5 — Audio Analysis', desc: 'Checking audio characteristics & phonetic lip-sync...' },
-  { id: 6, title: 'Step 6 — Provenance', desc: 'Verifying C2PA digital certificate chain & SHA-256...' },
-  { id: 7, title: 'Step 7 — Ensemble Decision', desc: 'Aggregating neural model signals & generating heatmap...' },
+  { id: 6, title: 'Step 6 — Provenance', desc: 'C2PA manifest probe & SHA-256 content hash...' },
+  { id: 7, title: 'Step 7 — Aggregate & Explain', desc: 'Combining forensic signals & generating the anomaly heatmap...' },
 ];
 
 export const AnalysisProcessingPage: React.FC = () => {

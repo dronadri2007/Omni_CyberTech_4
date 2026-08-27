@@ -109,14 +109,16 @@ export const AnalysisResultsPage: React.FC = () => {
           </div>
 
           <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 font-sans">
-            {isManipulated && 'Likely Synthetic or Deepfake Media'}
+            {isManipulated && 'Likely Synthetic or Manipulated Media'}
             {isSuspicious && 'Suspicious Editing Signals Flagged'}
-            {isAuthentic && 'Cryptographically Verified Authentic'}
+            {isAuthentic && (provenanceDetails.c2paValid ? 'Cryptographically Verified Authentic' : 'No Manipulation Indicators Detected')}
             {verdict === 'INCONCLUSIVE' && 'Inconclusive Analysis Signal'}
           </h2>
 
           <p className="text-xs text-slate-700 font-sans leading-relaxed font-medium">
-            Target file <span className="font-mono text-blue-700 font-bold">{mediaFile.filename}</span> was evaluated against the VERIFRAME v2.4 spatial-temporal neural ensemble.
+            Target file <span className="font-mono text-blue-700 font-bold">{mediaFile.filename}</span> was evaluated by the VERIFRAME{' '}
+            <span className="font-mono text-blue-700 font-bold">{caseData.detectionResults.modelVersion}</span> engine
+            {' '}(Error-Level Analysis, EXIF, C2PA provenance).
           </p>
 
           <div className="pt-2 flex flex-wrap gap-3">

@@ -65,7 +65,7 @@ export const AnalyzeMediaPage: React.FC = () => {
           MULTIMODAL AI MEDIA ANALYSIS
         </h1>
         <p className="text-xs font-mono text-slate-600">
-          Upload media or paste URL for deepfake detection, C2PA provenance verification & Grad-CAM visual evidence
+          Upload media or paste a URL for forensic analysis (ELA + EXIF + C2PA) with an explainable anomaly heatmap
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export const AnalyzeMediaPage: React.FC = () => {
           <span className="text-blue-700 font-bold flex items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-blue-600" /> 1-CLICK DEMO CASES FOR HACKATHON EVALUATION
           </span>
-          <span className="text-slate-500 font-semibold">Instant AI Inference</span>
+          <span className="text-slate-500 font-semibold">Forensic Engine</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
