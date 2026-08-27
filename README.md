@@ -11,6 +11,63 @@ human-in-the-loop review queue for borderline cases.
 
 ---
 
+## Phase 2 Progress — Omnikon National Hackathon 2026
+
+**Team codeX** · Dronadri Poornanda Chalam (Lead), Prapul Kumar
+Progress deck: [`docs/VERIFRAME_Phase2_codeX.pptx`](docs/VERIFRAME_Phase2_codeX.pptx) · [PDF](docs/VERIFRAME_Phase2_codeX.pdf)
+
+### Problem Statement
+Manipulated media spreads faster than it can be checked, and fact-checkers work across
+scattered tools. Detectors decay as new generators appear, and provenance signals like
+C2PA rarely reach the human making the call. VERIFRAME is an explainable forensic review
+workspace where every verdict traces back to a concrete computation on the file.
+
+### Progress Made
+Since Phase 1 the project moved from a UI demo with a filename-based mock detector to a
+working, hardened platform with a **real forensic detection engine** — no trained ML model
+yet, which is the one remaining drop-in behind the same interface. All work is merged to
+`main`: 6 commits, 75 files, +5,870 / −1,245 lines, **20 automated tests passing, CI green**
+(PR #1).
+
+### Features Implemented
+- 17-page React 18 + TypeScript SOC console; ~18-endpoint Express REST API
+- **Forensic engine:** Error-Level-Analysis anomaly heatmap (`sharp`), noise / smoothness
+  statistics, EXIF extraction + inconsistency flags (`exifr`), C2PA manifest probe —
+  weighted into a verdict plus authenticity / manipulation scores
+- Real auth: JWT + bcrypt, role middleware, rate limiting, helmet, zod validation, CORS allowlist
+- Data layer: `Store` interface → in-memory (default) or PostgreSQL (`PgStore` + migration runner)
+- Python FastAPI inference service (`ai-engine/`) — frequency-heuristic backend now, trained
+  `torch` / `timm` model is a `MODEL_WEIGHTS` drop-in
+- Interactive evidence viewer (heatmap overlay / split / opacity), human review queue with
+  verdict override, PDF / JSON report export
+
+### Technical Architecture
+React SPA → Express API (helmet, rate-limit, zod, JWT) → `MediaAnalyzer` interface, one env
+switch selecting Forensic (default) / PyTorch / Mock → `Store` (Memory or Postgres). A
+separate FastAPI service hosts inference. Docker Compose runs db + ai-engine + server +
+client; GitHub Actions runs typecheck, build, tests, and compose validation.
+
+### Challenges Faced
+Defining one analysis contract covering image, video and audio before a model existed;
+writing a real no-ML forensic engine that fills that same contract; making the client
+server-authoritative while keeping demo resilience. Domain risks addressed: model staleness
+(retraining loop), video compute cost (edge triage), false positives (review queue +
+thresholds), and the bounded recall of a heuristic versus a trained model.
+
+### Future Roadmap
+Train and serve real weights behind the existing FastAPI service (benchmarked on
+FaceForensics++ / DFDC / Celeb-DF); bundle native C2PA cryptographic verification; add
+`ffmpeg` video-frame + audio extraction with per-frame scores; model-gradient heatmaps;
+persist users to Postgres; continual-learning loop from reviewer overrides; Chrome
+extension + chat bots.
+
+### Screenshots / Demo
+The progress deck embeds screenshots from a live analysis run through the hardened stack —
+the forensic verdict page (`forensic-v1-noml` engine, real scores) and the genuine 8×8 ELA
+heatmap over an uploaded image. No accuracy figures are claimed; benchmarking is Phase 3.
+
+---
+
 ## What is real vs. what is the next slot
 
 | Layer | Status |
