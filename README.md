@@ -2,125 +2,168 @@
 
 > **Verify what you see. Trust what you share.**
 
-VERIFRAME is an enterprise-grade cybersecurity and AI-powered media verification platform designed to ingest images, videos, audio recordings, and social media URLs to detect deepfakes, synthetic voice clones, digital tamperings, and suspicious provenance.
+Hackathon problem statement **Omni_CyberTech_4 — Detecting Deepfake and Manipulated Media** · Team **codeX** · Omnikon National Hackathon 2026.
 
-Built for social-media users, journalists, fact-checkers, election integrity teams, and SOC cybersecurity analysts.
+VERIFRAME ingests images, video, audio, and social/media URLs and returns a
+manipulation-confidence verdict with explainable evidence: an anomaly heatmap,
+metadata inconsistencies, and C2PA / Content-Credentials provenance — plus a
+human-in-the-loop review queue for borderline cases.
 
 ---
 
-## Technical Architecture Overview
+## What is real vs. what is the next slot
+
+| Layer | Status |
+|---|---|
+| 17-page React SOC console, Express REST API, review workflow, reports | **Built** |
+| Auth: JWT + bcrypt, RBAC middleware, rate limiting, helmet, zod validation | **Built** |
+| **Forensic detection engine** — Error-Level-Analysis heatmap, noise/smoothness stats, EXIF extraction + inconsistency flags, C2PA manifest probe | **Built** (real signal, **no ML model**) |
+| PostgreSQL persistence (falls back to in-memory) | **Built** |
+| Python FastAPI inference service — frequency-domain heuristic backend | **Built**; trained-model backend is a drop-in (`MODEL_WEIGHTS`) |
+| Trained face-forgery / synthetic-voice models, video frame + audio extraction, Chrome extension, chat bots | **Roadmap** |
+
+The detection engine sits behind one interface
+(`server/src/services/analysisEngine/MediaAnalyzer.ts`). `ANALYZER=forensic|mock|pytorch`
+swaps the implementation with no change anywhere else.
+
+---
+
+## Architecture
 
 ```text
 veriframe/
-│
-├── client/                     # React + TypeScript + Vite + Tailwind CSS + Framer Motion
-│   ├── src/
-│   │   ├── components/         # SOC Badges, Visual Grad-CAM Canvas, Video Timeline, Audio Waveform
-│   │   ├── pages/              # 17 Responsive Views (Landing, Dashboard, Analyze, Results, Evidence, etc.)
-│   │   ├── services/           # API Client with zero-downtime mock fallback
-│   │   ├── context/            # AuthContext for role-based authentication
-│   │   └── types/              # Shared TypeScript data schemas
-│
-├── server/                     # Node.js + Express + TypeScript REST API
-│   ├── src/
-│   │   ├── controllers/        # Auth, Analyze, Cases, Reviews, Reports, Stats Controllers
-│   │   ├── services/
-│   │   │   ├── MockStore.ts    # Standalone pre-seeded data store with full persistence
-│   │   │   └── analysisEngine/ # Modular MediaAnalyzer Interface & MockMediaAnalyzer
-│   │   └── index.ts            # Express server initialization
-│
-├── database/                   # PostgreSQL Schema & Seed Files
-│   ├── schema.sql              # Relational tables: users, analysis_cases, media_files, detection_results, etc.
-│   └── seed.sql                # Pre-seeded hackathon demo cases
-│
-└── package.json                # Unified workspace scripts
+├── client/        React 18 + Vite + TS + Tailwind + Framer Motion + Recharts
+│   └── src/services/api.ts     server-authoritative API client (Bearer token, slim offline fallback)
+├── server/        Node + Express + TS
+│   └── src/
+│       ├── config/env.ts       zod-validated environment
+│       ├── middleware/          auth (JWT), validate (zod), errorHandler
+│       ├── services/
+│       │   ├── authService.ts   bcrypt + JWT
+│       │   ├── analysisEngine/  MediaAnalyzer + Forensic / Mock / PyTorch impls + forensic/{ela,exif,c2pa,imageStats}
+│       │   └── store/           Store interface → MemoryStore | PgStore
+│       └── db/                  pg pool + migrate runner
+├── ai-engine/     FastAPI inference microservice (frequency heuristic; torch backend optional)
+├── database/      schema.sql + migrations/
+└── docker-compose.yml   db + ai-engine + server + client
 ```
+
+Request flow: browser → (`/api` proxy) → Express → `requireAuth` → `validate` →
+controller → `analyzer.analyze()` → `store.addCase()` → response.
 
 ---
 
-## ⚡ Quick Start & Installation
-
-### Prerequisites
-* **Node.js**: v18.0.0 or higher
-* **npm**: v9.0.0 or higher
-
-### 1. Install Dependencies
-Run the following command from the root directory to install all packages for root, server, and client:
+## Quick start (local, zero config)
 
 ```bash
-npm run install:all
+npm run install:all          # root + server + client
+cp .env.example .env          # optional — sensible defaults are built in
+
+# terminal 1
+npm run dev:server            # http://localhost:5000  (ANALYZER=forensic, in-memory store)
+# terminal 2
+npm run dev:client            # http://localhost:3000
 ```
 
-### 2. Start Development Servers
-Run the backend API server and frontend client concurrently:
+Open `http://localhost:3000`. You are auto-signed-in as the demo fact-checker.
 
-* **Backend API**: Starts on `http://localhost:5000`
-* **Frontend Web App**: Starts on `http://localhost:3000`
+**Demo credentials** (also on the login page): `sarah.vance@factcheck.org` /
+`alex.mercer@cybersec.io`, password `veriframe-demo`.
+
+### Run everything in Docker (with PostgreSQL + model service)
 
 ```bash
-# Terminal 1: Start Backend Express Server
-npm run dev:server
-
-# Terminal 2: Start Frontend React Client
-npm run dev:client
+JWT_SECRET=$(openssl rand -hex 32) docker compose up --build
+# client  → http://localhost:8080
+# api     → http://localhost:5000/api/health
 ```
 
----
+### Use the Python model service
 
-## 🧠 Modular AI Engine & PyTorch Handoff Architecture
-
-VERIFRAME uses a decoupled strategy pattern for deepfake inference. The server defines a standard TypeScript interface:
-
-```typescript
-// server/src/services/analysisEngine/MediaAnalyzer.ts
-export interface MediaAnalyzer {
-  analyze(input: AnalysisInput): Promise<AnalysisCase>;
-}
+```bash
+cd ai-engine && pip install -r requirements.txt
+uvicorn app.main:app --port 8000
+# then run the API with:
+ANALYZER=pytorch AI_ENGINE_SERVICE_URL=http://localhost:8000/v1/inference npm run dev:server
 ```
 
-### Swapping Mock Detector with Real PyTorch Models
-
-To replace the included `MockMediaAnalyzer` with a real PyTorch/FastAPI model server (e.g., XceptionNet, EfficientNet-B4, Wav2Vec2, or C2PA PyC2PA library):
-
-1. Create `PyTorchMediaAnalyzer.ts` implementing `MediaAnalyzer`.
-2. Send HTTP requests to your Python inference microservice (`http://localhost:8000/predict`).
-3. Update `server/src/controllers/analyzeController.ts` to instantiate `PyTorchMediaAnalyzer`.
+If the service is unreachable the API transparently falls back to the forensic engine.
 
 ---
 
-## 🏆 Hackathon Judge Presentation Flow
+## Configuration (`.env`)
 
-To demonstrate the full capability of VERIFRAME during a live demo:
-
-1. **Landing Page (`http://localhost:3000/`)**: Point out the live SOC preview mockup, tagline, and 6 core detection capabilities.
-2. **Click "ANALYZE MEDIA"**: Opens `/analyze`.
-3. **1-Click Demo Quick Load**: Click **"Sample 1: Deepfake Video"**.
-4. **Animated Processing Workflow (`/analyze/processing/VF-2026-000124`)**: Observe the 7-stage animated progress screen executing spatial, temporal, spectral, and C2PA checks.
-5. **Analysis Results (`/analyze/results/VF-2026-000124`)**: Review the **87% LIKELY MANIPULATED** verdict, circular score gauge, and explainable AI metrics.
-6. **Interactive Evidence Viewer (`/evidence/VF-2026-000124`)**: Toggle between **Original**, **AI Heatmap**, **Overlay**, and **Side-by-Side** Grad-CAM visual overlays.
-7. **C2PA Provenance (`/provenance/VF-2026-000124`)**: Inspect unverified hardware cryptographic manifests and software modification history.
-8. **Human Review Queue (`/review`)**: Demonstrate expert reviewer notes and verdict override capability.
-9. **Verification Report (`/reports/VF-2026-000124`)**: Download the PDF verification certificate or export raw JSON metrics.
-
----
-
-## 🗄️ Database Setup (Optional PostgreSQL)
-
-If you prefer to run against a real PostgreSQL instance instead of the built-in standalone `MockStore`:
-
-1. Create PostgreSQL database:
-   ```sql
-   CREATE DATABASE veriframe_db;
-   ```
-2. Execute schema & seed scripts:
-   ```bash
-   psql -d veriframe_db -f database/schema.sql
-   psql -d veriframe_db -f database/seed.sql
-   ```
-3. Set `DATABASE_URL` in `.env`.
+| Var | Default | Purpose |
+|---|---|---|
+| `PORT` | `5000` | API port |
+| `JWT_SECRET` | dev-only fallback | **required in production** |
+| `JWT_EXPIRES_IN` | `12h` | token lifetime |
+| `ANALYZER` | `forensic` | `forensic` \| `mock` \| `pytorch` |
+| `AI_ENGINE_SERVICE_URL` | `http://localhost:8000/v1/inference` | model service endpoint |
+| `DATABASE_URL` | _(unset → in-memory)_ | Postgres connection string |
+| `CORS_ORIGINS` | `http://localhost:3000` | comma-separated allowlist |
+| `MAX_UPLOAD_MB` | `50` | multer upload cap |
 
 ---
 
-## 📄 License & Attribution
-VERIFRAME — Hackathon Problem Statement **Omni_CyberTech_4 — Detecting Deepfake and Manipulated Media**.
-MIT License.
+## Database (optional)
+
+```bash
+createdb veriframe_db
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/veriframe_db npm run db:migrate
+```
+
+`db:migrate` applies `database/schema.sql` + everything in `database/migrations/`
+and seeds demo cases if the store is empty. With `DATABASE_URL` set the API uses
+`PgStore`; otherwise `MemoryStore` (resets on restart).
+
+---
+
+## Detection engine — what it actually computes
+
+`ForensicMediaAnalyzer` (images):
+
+* **Error Level Analysis** — recompress at a fixed quality, diff against the
+  original, measure where recompression residue concentrates (spliced regions
+  spike). Produces the 8×8 heatmap the evidence viewer renders.
+* **Noise / smoothness statistics** — high-frequency energy vs. a blur; an
+  unnaturally low noise floor on a photo-sized image is a GAN / heavy-denoise tell.
+* **EXIF** (`exifr`) — camera make/model, software history, capture-vs-modify time
+  gaps, generative-tool signatures, forged-header patterns.
+* **C2PA** — cryptographic validation via optional `c2pa-node`, or JUMBF
+  byte-marker detection (manifest present but unverified) as an honest fallback.
+
+Scores are aggregated with a provenance penalty into a `manipulationProbability`
+and verdict. Video/audio currently use metadata + provenance only and say so in
+the reasoning; full frame/spectral analysis is the model-service's job.
+
+The Python `freq-heuristic-v1` backend analyses the 2-D power spectrum for
+periodic upsampling spikes. Both heuristics are deliberately conservative and are
+labelled as placeholders for a trained model.
+
+---
+
+## Tests & CI
+
+```bash
+npm test                     # server: vitest + supertest (auth, API, forensic units)
+npm run typecheck            # strict tsc, server + client
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck + build + tests for the
+server and client, a smoke test for the Python service, and `docker compose config`.
+
+---
+
+## Security notes
+
+* Passwords are bcrypt-hashed; tokens are HS256 JWT. `requireAuth` guards every
+  mutation (`POST /analyze`, `DELETE /cases/:id`, review + key endpoints);
+  read paths use `optionalAuth`.
+* `helmet`, global + per-route `express-rate-limit`, CORS origin allowlist,
+  `x-powered-by` disabled, 1 MB JSON body cap, multer mime allowlist.
+* No secrets in the repo — `.env.example` ships placeholders only.
+
+## License
+
+MIT.

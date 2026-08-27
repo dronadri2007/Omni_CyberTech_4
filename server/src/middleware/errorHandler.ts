@@ -2,7 +2,7 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import { AppError } from '../utils/AppError';
-import { isProd } from '../config/env';
+import { env, isProd } from '../config/env';
 
 /** Wrap an async route handler so rejected promises reach the error handler. */
 export const asyncHandler =
@@ -28,8 +28,10 @@ export const errorHandler = (err: unknown, _req: Request, res: Response, _next: 
     return res.status(status).json({ error: err.message, code: `ERR_UPLOAD_${err.code}` });
   }
 
-  // eslint-disable-next-line no-console
-  console.error('[VERIFRAME Server Error]:', err);
+  if (env.NODE_ENV !== 'test') {
+    // eslint-disable-next-line no-console
+    console.error('[VERIFRAME Server Error]:', err);
+  }
   const message = err instanceof Error ? err.message : 'Internal Server Error';
   return res.status(500).json({
     error: isProd ? 'Internal Server Error' : message,

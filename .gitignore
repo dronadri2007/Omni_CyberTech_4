@@ -5,3 +5,9 @@ build/
 *.log
 uploads/
 .DS_Store
+
+# python
+__pycache__/
+*.pyc
+.venv/
+ai-engine/.venv/

@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: veriframe_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai-engine:
+    build:
+      context: ./ai-engine
+    environment:
+      PORT: 8000
+    ports:
+      - "8000:8000"
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-in-a-real-deploy}
+      DATABASE_URL: postgres://postgres:postgres@db:5432/veriframe_db
+      ANALYZER: ${ANALYZER:-forensic}
+      AI_ENGINE_SERVICE_URL: http://ai-engine:8000/v1/inference
+      CORS_ORIGINS: http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-engine:
+        condition: service_started
+    ports:
+      - "5000:5000"
+    # Run migrations then start the API.
+    command: sh -c "node dist/db/migrate.js && node dist/index.js"
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:

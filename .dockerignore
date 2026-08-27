@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/build
+**/.git
+**/coverage
+**/*.log
+**/.env
+**/_smoke
+phase2
+extracted
