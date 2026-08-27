@@ -146,7 +146,7 @@ export const LandingPage: React.FC = () => {
 
               <div className="absolute bottom-2 left-2 bg-white/90 border border-slate-200 px-2.5 py-1 rounded text-[10px] font-mono text-red-600 flex items-center gap-1.5 shadow-md">
                 <AlertTriangle className="w-3 h-3 text-red-600" />
-                <span>GRAD-CAM: Spatial Anomaly Flagged</span>
+                <span>ELA: Spatial Anomaly Flagged</span>
               </div>
             </div>
           </div>
@@ -199,7 +199,7 @@ export const LandingPage: React.FC = () => {
             { step: '02', title: 'Extract', desc: 'Keyframes, audio spectra & EXIF.' },
             { step: '03', title: 'Analyze', desc: 'Parallel Spatial & Temporal Neural Net.' },
             { step: '04', title: 'Verify', desc: 'Check C2PA signature & chain.' },
-            { step: '05', title: 'Explain', desc: 'Generate Grad-CAM & reasoning.' },
+            { step: '05', title: 'Explain', desc: 'Generate anomaly heatmap & reasoning.' },
             { step: '06', title: 'Report', desc: 'Export PDF certificate or JSON.' },
           ].map((s, idx) => (
             <div key={idx} className="glass-panel p-5 rounded-xl border border-slate-200 space-y-3 relative group hover:border-blue-500/50 transition-all">

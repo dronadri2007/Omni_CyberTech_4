@@ -28,9 +28,9 @@ export const HelpLearnPage: React.FC = () => {
         </div>
 
         <div className="glass-panel p-6 rounded-xl border border-slate-200 bg-white space-y-3 font-sans shadow-sm">
-          <h3 className="font-mono font-bold text-sm text-emerald-700">3. Understanding Grad-CAM Visual Heatmaps</h3>
+          <h3 className="font-mono font-bold text-sm text-emerald-700">3. Understanding the Anomaly Heatmap</h3>
           <p className="text-slate-700 leading-relaxed font-medium">
-            Grad-CAM (Gradient-weighted Class Activation Mapping) highlights spatial regions of interest where the deep neural network detected pixel anomalies—such as unnatural eye reflections, diffusion blur, or facial boundaries.
+            The heatmap is an Error-Level-Analysis grid: the image is recompressed at a fixed quality and differenced against the original, so regions with unusual recompression residue — typical of splices or painted edits — light up. A trained model will later add gradient-based attention on top of this.
           </p>
         </div>
       </div>
