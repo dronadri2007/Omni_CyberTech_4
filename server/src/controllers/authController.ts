@@ -1,55 +1,37 @@
-import { Request, Response } from 'express';
+import { z } from 'zod';
+import { asyncHandler } from '../middleware/errorHandler';
+import { authService } from '../services/authService';
+import { AppError } from '../utils/AppError';
 
-export const loginUser = (req: Request, res: Response) => {
-  const { email, password } = req.body;
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
+export const registerSchema = z.object({
+  name: z.string().min(2).max(120),
+  email: z.string().email(),
+  password: z.string().min(8).max(200),
+});
 
-  // Demo authentication fallback
-  const user = {
-    id: 'usr-demo-001',
-    name: email.split('@')[0].replace('.', ' ').toUpperCase(),
-    email,
-    role: email.includes('fact') ? 'fact_checker' : 'analyst',
-    token: 'veriframe_demo_jwt_token_2026_xyz'
+export const loginUser = asyncHandler(async (req, res) => {
+  const { user, token } = await authService.login(req.body);
+  res.status(200).json({ message: 'Login successful', user, token });
+});
+
+export const registerUser = asyncHandler(async (req, res) => {
+  const { user, token } = await authService.register(req.body);
+  res.status(201).json({ message: 'Registration successful', user, token });
+});
+
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  if (!req.auth) throw AppError.unauthorized();
+  const user = authService.getById(req.auth.sub) ?? {
+    id: req.auth.sub,
+    name: req.auth.name,
+    email: req.auth.email,
+    role: req.auth.role,
+    createdAt: new Date(0).toISOString(),
   };
-
-  return res.status(200).json({
-    message: 'Login successful',
-    user
-  });
-};
-
-export const registerUser = (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email, and password are required' });
-  }
-
-  const user = {
-    id: `usr-${Date.now().toString(36)}`,
-    name,
-    email,
-    role: 'analyst',
-    token: 'veriframe_demo_jwt_token_2026_xyz'
-  };
-
-  return res.status(201).json({
-    message: 'Registration successful',
-    user
-  });
-};
-
-export const getCurrentUser = (req: Request, res: Response) => {
-  return res.status(200).json({
-    user: {
-      id: 'usr-demo-001',
-      name: 'Dr. Sarah Vance',
-      email: 'sarah.vance@factcheck.org',
-      role: 'fact_checker'
-    }
-  });
-};
+  res.status(200).json({ user });
+});
