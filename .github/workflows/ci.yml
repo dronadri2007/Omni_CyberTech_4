@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+        working-directory: server
+      - run: npm run typecheck
+        working-directory: server
+      - run: npm run build
+        working-directory: server
+      - run: npm test
+        working-directory: server
+
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+      - run: npm run typecheck
+        working-directory: client
+      - run: npm run build
+        working-directory: client
+
+  ai-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+        working-directory: ai-engine
+      - run: python -m compileall app
+        working-directory: ai-engine
+      - name: Smoke-test the frequency backend
+        working-directory: ai-engine
+        run: |
+          python - <<'PY'
+          import io, numpy as np
+          from PIL import Image
+          from app.model import predict_image
+          b = io.BytesIO()
+          Image.fromarray((np.random.rand(256,256,3)*255).astype('uint8')).save(b, format='JPEG')
+          p = predict_image(b.getvalue())
+          assert 0 <= p.face_forgery_score <= 100
+          assert len(p.heatmap) == 8
+          print('ai-engine smoke OK', p.model_version)
+          PY
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose config -q

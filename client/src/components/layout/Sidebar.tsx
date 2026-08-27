@@ -72,10 +72,10 @@ export const Sidebar: React.FC = () => {
       <div className="p-4 border-t border-slate-200">
         <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-slate-600 font-mono text-[11px] space-y-1">
           <div className="flex items-center justify-between text-slate-800 font-bold">
-            <span>MODEL ENSEMBLE</span>
-            <span className="text-blue-600">v2.4</span>
+            <span>DETECTION ENGINE</span>
+            <span className="text-blue-600">forensic-v1</span>
           </div>
-          <p className="text-[10px] text-slate-500">Spatial + Temporal + C2PA</p>
+          <p className="text-[10px] text-slate-500">ELA + EXIF + C2PA · model slot: pytorch</p>
         </div>
       </div>
     </aside>

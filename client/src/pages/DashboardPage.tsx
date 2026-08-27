@@ -50,7 +50,7 @@ export const DashboardPage: React.FC = () => {
             CYBERSECURITY SOC DASHBOARD
           </h1>
           <p className="text-xs text-slate-500 font-mono mt-1">
-            Real-time media authenticity telemetries and neural ensemble monitoring
+            Real-time media authenticity telemetry and forensic-engine monitoring
           </p>
         </div>
 

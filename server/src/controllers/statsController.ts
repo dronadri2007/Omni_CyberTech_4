@@ -1,26 +1,24 @@
-import { Request, Response } from 'express';
-import { MockStore } from '../services/MockStore';
+import { z } from 'zod';
+import { randomUUID } from 'crypto';
+import { asyncHandler } from '../middleware/errorHandler';
+import { store } from '../services/store';
 
-export const getStats = (req: Request, res: Response) => {
-  const stats = MockStore.getStats();
-  return res.status(200).json(stats);
-};
+export const apiKeyBody = z.object({ name: z.string().min(2).max(120) });
 
-export const getApiKeys = (req: Request, res: Response) => {
-  const keys = MockStore.getApiKeys();
-  return res.status(200).json({ keys });
-};
+export const getStats = asyncHandler(async (_req, res) => {
+  res.status(200).json(await store.getStats());
+});
 
-export const createApiKey = (req: Request, res: Response) => {
-  const { name } = req.body;
-  if (!name) {
-    return res.status(400).json({ error: 'API key name is required' });
-  }
+export const getApiKeys = asyncHandler(async (_req, res) => {
+  res.status(200).json({ keys: await store.getApiKeys() });
+});
 
-  const key = MockStore.createApiKey(name);
-  return res.status(201).json({
-    message: 'API Key generated successfully',
+export const createApiKey = asyncHandler(async (req, res) => {
+  const key = await store.createApiKey(req.body.name);
+  // The full secret is shown once, here only.
+  res.status(201).json({
+    message: 'API key generated',
     key,
-    secret: `${key.keyPrefix}${Math.random().toString(36).substring(2, 18)}`
+    secret: `${key.keyPrefix}${randomUUID().replace(/-/g, '')}`,
   });
-};
+});

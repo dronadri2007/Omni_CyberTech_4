@@ -1,19 +1,25 @@
 {
   "name": "veriframe-platform",
-  "version": "1.0.0",
+  "version": "2.5.0",
   "description": "VERIFRAME — Full-Stack Deepfake & Multimodal Media Verification Platform",
   "private": true,
   "scripts": {
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
-    "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev",
-    "build": "cd server && npm run build && cd ../client && npm run build",
-    "start": "cd server && npm run start"
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "start": "npm --prefix server run start",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix client run typecheck",
+    "test": "npm --prefix server test",
+    "db:migrate": "npm --prefix server run db:migrate",
+    "compose:up": "docker compose up --build",
+    "compose:down": "docker compose down -v"
   },
   "keywords": [
     "deepfake-detection",
     "c2pa",
     "provenance",
+    "error-level-analysis",
     "cybersecurity",
     "multimodal-ai"
   ],

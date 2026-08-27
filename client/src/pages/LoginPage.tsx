@@ -6,19 +6,28 @@ import { useAuth } from '../context/AuthContext';
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const doLogin = async (e: string, p: string) => {
+    setFormError(null);
+    try {
+      await login(e, p);
+      navigate('/dashboard');
+    } catch (err) {
+      setFormError((err as Error).message);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    login(email || 'analyst@veriframe.io', 'analyst');
-    navigate('/dashboard');
+    void doLogin(email, password);
   };
 
   const handleDemoLogin = (role: 'analyst' | 'fact_checker') => {
     const demoEmail = role === 'fact_checker' ? 'sarah.vance@factcheck.org' : 'alex.mercer@cybersec.io';
-    login(demoEmail, role);
-    navigate('/dashboard');
+    void doLogin(demoEmail, 'veriframe-demo');
   };
 
   return (
@@ -50,6 +59,12 @@ export const LoginPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {formError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-mono rounded-lg px-3 py-2 text-center">
+            {formError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 font-mono">
           <div className="space-y-1">

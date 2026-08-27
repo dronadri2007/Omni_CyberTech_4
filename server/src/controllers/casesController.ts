@@ -1,110 +1,56 @@
-import { Request, Response } from 'express';
-import { MockStore } from '../services/MockStore';
+import { z } from 'zod';
+import { asyncHandler } from '../middleware/errorHandler';
+import { AppError } from '../utils/AppError';
+import { store } from '../services/store';
 
-export const getCases = (req: Request, res: Response) => {
-  let cases = MockStore.getAllCases();
-  const { verdict, risk, search, mediaType } = req.query;
+export const caseListQuery = z.object({
+  verdict: z.string().optional(),
+  risk: z.string().optional(),
+  search: z.string().max(200).optional(),
+  mediaType: z.string().optional(),
+});
 
-  if (verdict) {
-    cases = cases.filter(c => c.verdict.toLowerCase() === (verdict as string).toLowerCase());
-  }
+export const caseIdParams = z.object({
+  caseId: z.string().min(3).max(64),
+});
 
-  if (risk) {
-    cases = cases.filter(c => c.riskLevel.toLowerCase() === (risk as string).toLowerCase());
-  }
+export const reviewNoteBody = z.object({
+  notes: z.string().max(2000).optional(),
+});
 
-  if (search) {
-    const q = (search as string).toLowerCase();
-    cases = cases.filter(c => c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q));
-  }
+export const getCases = asyncHandler(async (req, res) => {
+  const cases = await store.getAllCases(req.query as z.infer<typeof caseListQuery>);
+  res.status(200).json({ count: cases.length, cases });
+});
 
-  if (mediaType) {
-    const typeStr = (mediaType as string).toUpperCase();
-    cases = cases.filter(c => {
-      if (typeStr === 'IMAGE') return c.mediaFile.mimeType.includes('image');
-      if (typeStr === 'VIDEO') return c.mediaFile.mimeType.includes('video');
-      if (typeStr === 'AUDIO') return c.mediaFile.mimeType.includes('audio');
-      return true;
-    });
-  }
+export const getCaseById = asyncHandler(async (req, res) => {
+  const item = await store.getCaseById(req.params.caseId);
+  if (!item) throw AppError.notFound('Case not found');
+  res.status(200).json(item);
+});
 
-  return res.status(200).json({
-    count: cases.length,
-    cases
-  });
-};
+export const deleteCase = asyncHandler(async (req, res) => {
+  const ok = await store.deleteCase(req.params.caseId);
+  if (!ok) throw AppError.notFound('Case not found or already deleted');
+  res.status(200).json({ message: 'Case deleted', caseId: req.params.caseId });
+});
 
-export const getCaseById = (req: Request, res: Response) => {
-  const { caseId } = req.params;
-  const item = MockStore.getCaseById(caseId);
+export const getProvenance = asyncHandler(async (req, res) => {
+  const item = await store.getCaseById(req.params.caseId);
+  if (!item) throw AppError.notFound('Case not found');
+  res.status(200).json({ caseId: item.id, provenance: item.provenanceDetails });
+});
 
-  if (!item) {
-    return res.status(404).json({ error: 'Case not found' });
-  }
+export const getEvidence = asyncHandler(async (req, res) => {
+  const item = await store.getCaseById(req.params.caseId);
+  if (!item) throw AppError.notFound('Case not found');
+  res.status(200).json({ caseId: item.id, mediaFile: item.mediaFile, detectionResults: item.detectionResults });
+});
 
-  return res.status(200).json(item);
-};
-
-export const deleteCase = (req: Request, res: Response) => {
-  const { caseId } = req.params;
-  const deleted = MockStore.deleteCase(caseId);
-
-  if (!deleted) {
-    return res.status(404).json({ error: 'Case not found or already deleted' });
-  }
-
-  return res.status(200).json({ message: 'Case deleted successfully', caseId });
-};
-
-export const getProvenance = (req: Request, res: Response) => {
-  const { caseId } = req.params;
-  const item = MockStore.getCaseById(caseId);
-
-  if (!item) {
-    return res.status(404).json({ error: 'Case not found' });
-  }
-
-  return res.status(200).json({
-    caseId: item.id,
-    provenance: item.provenanceDetails
-  });
-};
-
-export const getEvidence = (req: Request, res: Response) => {
-  const { caseId } = req.params;
-  const item = MockStore.getCaseById(caseId);
-
-  if (!item) {
-    return res.status(404).json({ error: 'Case not found' });
-  }
-
-  return res.status(200).json({
-    caseId: item.id,
-    mediaFile: item.mediaFile,
-    detectionResults: item.detectionResults
-  });
-};
-
-export const sendForReview = (req: Request, res: Response) => {
-  const { caseId } = req.params;
-  const { notes } = req.body;
-
-  const item = MockStore.getCaseById(caseId);
-  if (!item) {
-    return res.status(404).json({ error: 'Case not found' });
-  }
-
-  item.status = 'IN_REVIEW';
-  item.reviewRequired = true;
-
-  const updatedReviews = MockStore.updateReview(caseId, {
-    notes,
-    status: 'IN_REVIEW'
-  });
-
-  return res.status(200).json({
-    message: 'Case successfully submitted to Human Review Queue',
-    caseId,
-    status: item.status
-  });
-};
+export const sendForReview = asyncHandler(async (req, res) => {
+  const item = await store.getCaseById(req.params.caseId);
+  if (!item) throw AppError.notFound('Case not found');
+  await store.updateCase(item.id, { status: 'IN_REVIEW', reviewRequired: true });
+  await store.updateReview(item.id, { notes: req.body.notes, status: 'IN_REVIEW' });
+  res.status(200).json({ message: 'Case submitted to the human review queue', caseId: item.id, status: 'IN_REVIEW' });
+});

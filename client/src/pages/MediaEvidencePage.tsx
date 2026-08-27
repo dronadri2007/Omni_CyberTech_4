@@ -62,7 +62,7 @@ export const MediaEvidencePage: React.FC = () => {
             activeTab === 'visual' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Eye className="w-4 h-4" /> VISUAL GRAD-CAM HEATMAP
+          <Eye className="w-4 h-4" /> ANOMALY HEATMAP (ELA)
         </button>
 
         {isVideo && (

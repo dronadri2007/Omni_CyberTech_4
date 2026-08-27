@@ -1,0 +1,12 @@
+# VERIFRAME model inference service — base runtime (CPU, no GPU required)
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pillow==10.4.0
+numpy==2.1.1
+python-multipart==0.0.9
+pydantic==2.9.2
+
+# --- Optional: real deep model backend ---
+# Install these to run a trained classifier instead of the frequency heuristic:
+#   pip install torch torchvision timm
+# and set MODEL_WEIGHTS=/path/to/checkpoint.pt  MODEL_ARCH=tf_efficientnet_b4

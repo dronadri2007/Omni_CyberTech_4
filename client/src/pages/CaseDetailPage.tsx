@@ -158,7 +158,7 @@ export const CaseDetailPage: React.FC = () => {
                 <span className="text-slate-500 font-mono text-[11px] font-bold">{new Date(caseData.createdAt).toLocaleTimeString()}</span>
               </div>
               <div className="bg-slate-50 p-2.5 rounded border border-slate-200 flex items-center justify-between">
-                <span>Neural Ensemble Inference Complete (v2.4)</span>
+                <span>Forensic analysis complete (forensic-v1)</span>
                 <span className="text-slate-500 font-mono text-[11px] font-bold">Completed</span>
               </div>
             </div>

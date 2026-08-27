@@ -1,58 +1,85 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
+import { apiService, tokenStore } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, role?: string) => void;
+  loading: boolean;
+  error: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
-  login: () => {},
+  loading: true,
+  error: null,
+  login: async () => {},
+  register: async () => {},
   logout: () => {},
 });
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('veriframe_user');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return null;
-      }
-    }
-    // Default demo session for immediate usage
-    return {
-      id: 'usr-demo-001',
-      name: 'Dr. Sarah Vance',
-      email: 'sarah.vance@factcheck.org',
-      role: 'fact_checker'
-    };
-  });
+// One-click demo sign-in so judges never hit a login wall. Matches server/src/services/authService.ts.
+const DEMO_EMAIL = 'sarah.vance@factcheck.org';
+const DEMO_PASSWORD = 'veriframe-demo';
 
-  const login = (email: string, role: string = 'analyst') => {
-    const newUser: User = {
-      id: `usr-${Date.now().toString(36)}`,
-      name: email.split('@')[0].toUpperCase(),
-      email,
-      role: role as any,
-      token: 'demo_token_123'
-    };
-    setUser(newUser);
-    localStorage.setItem('veriframe_user', JSON.stringify(newUser));
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (tokenStore.get()) {
+          const { user: me } = await apiService.me();
+          setUser(me);
+        } else {
+          // Auto-provision the demo session.
+          const { user: me } = await apiService.login(DEMO_EMAIL, DEMO_PASSWORD);
+          setUser(me);
+        }
+      } catch {
+        tokenStore.clear();
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    setError(null);
+    try {
+      const { user: me } = await apiService.login(email, password);
+      setUser(me);
+    } catch (e) {
+      setError((e as Error).message);
+      throw e;
+    }
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    setError(null);
+    try {
+      const { user: me } = await apiService.register(name, email, password);
+      setUser(me);
+    } catch (e) {
+      setError((e as Error).message);
+      throw e;
+    }
   };
 
   const logout = () => {
+    apiService.logout();
     setUser(null);
-    localStorage.removeItem('veriframe_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, error, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

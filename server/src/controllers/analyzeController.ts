@@ -1,67 +1,66 @@
-import { Request, Response } from 'express';
-import { MockMediaAnalyzer } from '../services/analysisEngine/MockMediaAnalyzer';
-import { MockStore } from '../services/MockStore';
+import { z } from 'zod';
+import { asyncHandler } from '../middleware/errorHandler';
+import { AppError } from '../utils/AppError';
+import { analyzer } from '../services/analysisEngine';
+import { store } from '../services/store';
 import { MediaCategory } from '../types';
 
-const analyzer = new MockMediaAnalyzer();
+export const analyzeBodySchema = z.object({
+  url: z.string().url().optional(),
+  category: z.enum(['IMAGE', 'VIDEO', 'AUDIO', 'URL']).optional(),
+});
 
-export const analyzeMedia = async (req: Request, res: Response) => {
-  try {
-    const file = req.file;
-    const { url, category } = req.body;
+export const caseIdParam = z.object({
+  caseId: z.string().regex(/^VF-\d{4}-\d{4,8}$/, 'Invalid case id'),
+});
 
-    if (!file && !url) {
-      return res.status(400).json({ error: 'Either a file upload or a media URL must be provided.' });
-    }
-
-    let filename = file ? file.originalname : (url ? url.substring(url.lastIndexOf('/') + 1) || 'web_media_sample' : 'unknown_file');
-    let mimeType = file ? file.mimetype : 'image/jpeg';
-    let sizeBytes = file ? file.size : 1024000;
-
-    let mediaCategory: MediaCategory = 'IMAGE';
-    if (category) {
-      mediaCategory = category as MediaCategory;
-    } else if (file) {
-      if (file.mimetype.startsWith('video/')) mediaCategory = 'VIDEO';
-      else if (file.mimetype.startsWith('audio/')) mediaCategory = 'AUDIO';
-    } else if (url) {
-      if (url.match(/\.(mp4|mov|avi)$/i)) mediaCategory = 'VIDEO';
-      else if (url.match(/\.(mp3|wav|m4a|ogg)$/i)) mediaCategory = 'AUDIO';
-    }
-
-    const newCase = await analyzer.analyze({
-      filename,
-      mimeType,
-      sizeBytes,
-      buffer: file ? file.buffer : undefined,
-      url,
-      mediaCategory
-    });
-
-    MockStore.addCase(newCase);
-
-    return res.status(200).json({
-      message: 'Analysis completed successfully',
-      caseId: newCase.id,
-      result: newCase
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to complete media analysis', details: err.message });
+function inferCategory(opts: { explicit?: string; mime?: string; url?: string }): MediaCategory {
+  if (opts.explicit) return opts.explicit as MediaCategory;
+  const mime = opts.mime ?? '';
+  if (mime.startsWith('video/')) return 'VIDEO';
+  if (mime.startsWith('audio/')) return 'AUDIO';
+  if (opts.url) {
+    if (/\.(mp4|mov|avi|webm|mkv)$/i.test(opts.url)) return 'VIDEO';
+    if (/\.(mp3|wav|m4a|ogg|flac)$/i.test(opts.url)) return 'AUDIO';
   }
-};
+  return 'IMAGE';
+}
 
-export const getAnalysisStatus = (req: Request, res: Response) => {
-  const { caseId } = req.params;
-  const analysisCase = MockStore.getCaseById(caseId);
+export const analyzeMedia = asyncHandler(async (req, res) => {
+  const file = req.file;
+  const { url, category } = req.body as z.infer<typeof analyzeBodySchema>;
 
-  if (!analysisCase) {
-    return res.status(404).json({ error: 'Case not found' });
-  }
+  if (!file && !url) throw AppError.badRequest('Provide either a file upload (field "mediaFile") or a media URL.');
 
-  return res.status(200).json({
+  const filename = file
+    ? file.originalname
+    : url
+      ? url.substring(url.lastIndexOf('/') + 1) || 'web_media_sample'
+      : 'unknown_file';
+  const mimeType = file ? file.mimetype : 'application/octet-stream';
+
+  const newCase = await analyzer.analyze({
+    filename,
+    mimeType,
+    sizeBytes: file ? file.size : 0,
+    buffer: file ? file.buffer : undefined,
+    url,
+    mediaCategory: inferCategory({ explicit: category, mime: mimeType, url }),
+    userId: req.auth?.sub,
+  });
+
+  await store.addCase(newCase);
+
+  res.status(200).json({ message: 'Analysis completed', caseId: newCase.id, result: newCase });
+});
+
+export const getAnalysisStatus = asyncHandler(async (req, res) => {
+  const analysisCase = await store.getCaseById(req.params.caseId);
+  if (!analysisCase) throw AppError.notFound('Case not found');
+  res.status(200).json({
     caseId: analysisCase.id,
     status: analysisCase.status,
     verdict: analysisCase.verdict,
-    confidence: analysisCase.confidence
+    confidence: analysisCase.confidence,
   });
-};
+});

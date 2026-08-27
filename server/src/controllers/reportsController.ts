@@ -1,15 +1,12 @@
-import { Request, Response } from 'express';
-import { MockStore } from '../services/MockStore';
+import { asyncHandler } from '../middleware/errorHandler';
+import { AppError } from '../utils/AppError';
+import { store } from '../services/store';
 
-export const getReportByCaseId = (req: Request, res: Response) => {
-  const { caseId } = req.params;
-  const item = MockStore.getCaseById(caseId);
+export const getReportByCaseId = asyncHandler(async (req, res) => {
+  const item = await store.getCaseById(req.params.caseId);
+  if (!item) throw AppError.notFound('Case not found');
 
-  if (!item) {
-    return res.status(404).json({ error: 'Case not found' });
-  }
-
-  const reportData = {
+  res.status(200).json({
     reportId: `REP-${item.id}`,
     platform: 'VERIFRAME Multimodal Media Verification SOC',
     generatedAt: new Date().toISOString(),
@@ -21,7 +18,7 @@ export const getReportByCaseId = (req: Request, res: Response) => {
       authenticityScore: item.authenticityScore,
       manipulationProbability: item.manipulationProbability,
       riskLevel: item.riskLevel,
-      status: item.status
+      status: item.status,
     },
     mediaDetails: item.mediaFile,
     detectionBreakdown: {
@@ -30,12 +27,11 @@ export const getReportByCaseId = (req: Request, res: Response) => {
       audioVisualSyncScore: item.detectionResults.audioVisualScore,
       metadataRiskScore: item.detectionResults.metadataScore,
       provenanceStatus: item.detectionResults.provenanceStatus,
-      modelVersion: item.detectionResults.modelVersion
+      modelVersion: item.detectionResults.modelVersion,
     },
     reasoning: item.detectionResults.reasoningHighlights,
     provenance: item.provenanceDetails,
-    disclaimer: 'Notice: VERIFRAME deepfake analysis is an AI-assisted probabilistic evaluation based on neural ensemble metrics, frequency spectra, and C2PA manifests. It should be evaluated alongside contextual journalistic evidence.'
-  };
-
-  return res.status(200).json(reportData);
-};
+    disclaimer:
+      'VERIFRAME analysis is an AI-assisted probabilistic evaluation based on pixel forensics, metadata, and C2PA provenance. Evaluate alongside contextual journalistic evidence.',
+  });
+});
