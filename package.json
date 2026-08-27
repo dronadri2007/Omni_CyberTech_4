@@ -1,0 +1,22 @@
+{
+  "name": "veriframe-platform",
+  "version": "1.0.0",
+  "description": "VERIFRAME — Full-Stack Deepfake & Multimodal Media Verification Platform",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd server && npm run build && cd ../client && npm run build",
+    "start": "cd server && npm run start"
+  },
+  "keywords": [
+    "deepfake-detection",
+    "c2pa",
+    "provenance",
+    "cybersecurity",
+    "multimodal-ai"
+  ],
+  "author": "VERIFRAME Security Team",
+  "license": "MIT"
+}

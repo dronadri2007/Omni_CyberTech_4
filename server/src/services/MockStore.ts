@@ -1,0 +1,420 @@
+import { AnalysisCase, User, ReviewCase, AnalysisStats, ApiKey, VerdictType } from '../types';
+
+class MockStoreService {
+  private users: User[] = [
+    {
+      id: 'usr-demo-001',
+      name: 'Dr. Sarah Vance',
+      email: 'sarah.vance@factcheck.org',
+      role: 'fact_checker',
+      createdAt: '2026-01-15T09:00:00Z',
+    },
+    {
+      id: 'usr-demo-002',
+      name: 'Alex Mercer',
+      email: 'alex.mercer@cybersec.io',
+      role: 'analyst',
+      createdAt: '2026-02-01T10:30:00Z',
+    },
+  ];
+
+  private cases: AnalysisCase[] = [
+    {
+      id: 'VF-2026-000124',
+      userId: 'usr-demo-001',
+      mediaId: 'med-001',
+      title: 'Political Address Video Segment.mp4',
+      verdict: 'MANIPULATED',
+      confidence: 91,
+      authenticityScore: 9,
+      manipulationProbability: 91,
+      riskLevel: 'HIGH',
+      status: 'COMPLETED',
+      reviewRequired: true,
+      mediaFile: {
+        id: 'med-001',
+        filename: 'press_conference_deepfake.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 18452000,
+        fileHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        storageUrl: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
+        createdAt: '2026-08-20T14:32:00Z',
+      },
+      detectionResults: {
+        id: 'det-001',
+        caseId: 'VF-2026-000124',
+        faceForgeryScore: 94,
+        temporalScore: 88,
+        audioVisualScore: 86,
+        metadataScore: 75,
+        provenanceStatus: 'NOT_VERIFIED',
+        modelVersion: 'v2.4-ensemble-deepfake',
+        reasoningHighlights: [
+          'Facial landmark jitter detected across frames 120 through 240.',
+          'Audio pitch spectral anomaly detected around 4.2 seconds into recording.',
+          'C2PA cryptographic signature missing or corrupted in file header.',
+          'High correlation with known synthetic voice neural vocoder profile.'
+        ],
+        heatmapMatrix: [
+          [0.1, 0.2, 0.8, 0.9, 0.3],
+          [0.1, 0.7, 0.95, 0.85, 0.2],
+          [0.2, 0.9, 0.99, 0.9, 0.3],
+          [0.1, 0.6, 0.8, 0.7, 0.2],
+          [0.0, 0.1, 0.3, 0.2, 0.1]
+        ],
+        timelineAnomalies: [
+          { timestampSec: 1.4, score: 0.72, label: 'Blinking frequency anomaly' },
+          { timestampSec: 3.8, score: 0.94, label: 'Facial boundary warping' },
+          { timestampSec: 4.2, score: 0.89, label: 'Lip-sync asynchronous delay (140ms)' },
+          { timestampSec: 7.1, score: 0.86, label: 'Lighting color temperature mismatch' }
+        ],
+        createdAt: '2026-08-20T14:32:15Z',
+      },
+      provenanceDetails: {
+        id: 'prov-001',
+        caseId: 'VF-2026-000124',
+        c2paValid: false,
+        issuer: 'Unknown Manifest',
+        signatureTimestamp: undefined,
+        cameraMake: 'Generic Virtual Device',
+        cameraModel: 'OBS-VirtualCam-v2',
+        softwareHistory: ['FFmpeg 4.4.1', 'Adobe After Effects 2024 (Macintosh)'],
+        exifData: {
+          Format: 'MPEG-4',
+          Encoder: 'Lavf58.76.100',
+          Duration: '00:00:12.40',
+          Bitrate: '11.8 Mbps',
+          ColorSpace: 'yuv420p'
+        },
+        chainOfCustody: [
+          { timestamp: '2026-08-20T12:00:00Z', action: 'Uploaded to Social Network X', actor: 'Anonymous Handle' },
+          { timestamp: '2026-08-20T14:32:00Z', action: 'Ingested into VERIFRAME SOC', actor: 'Dr. Sarah Vance' }
+        ]
+      },
+      createdAt: '2026-08-20T14:32:00Z',
+      updatedAt: '2026-08-20T14:32:15Z',
+    },
+    {
+      id: 'VF-2026-000125',
+      userId: 'usr-demo-001',
+      mediaId: 'med-002',
+      title: 'Profile Photo Submission #8812.jpg',
+      verdict: 'SUSPICIOUS',
+      confidence: 78,
+      authenticityScore: 22,
+      manipulationProbability: 78,
+      riskLevel: 'MEDIUM',
+      status: 'IN_REVIEW',
+      reviewRequired: true,
+      mediaFile: {
+        id: 'med-002',
+        filename: 'synthetic_portrait.jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 2450100,
+        fileHash: 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb',
+        storageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80',
+        createdAt: '2026-08-21T09:15:00Z',
+      },
+      detectionResults: {
+        id: 'det-002',
+        caseId: 'VF-2026-000125',
+        faceForgeryScore: 82,
+        temporalScore: 45,
+        audioVisualScore: 0,
+        metadataScore: 85,
+        provenanceStatus: 'SUSPICIOUS',
+        modelVersion: 'v2.4-ensemble-deepfake',
+        reasoningHighlights: [
+          'Diffusion noise spectrum matches Midjourney v6 / Stable Diffusion pattern.',
+          'Asymmetric pupil reflection caught under high-resolution spectral inspection.',
+          'EXIF creation timestamp differs from internal compression header.'
+        ],
+        heatmapMatrix: [
+          [0.1, 0.2, 0.3, 0.2, 0.1],
+          [0.2, 0.85, 0.9, 0.8, 0.2],
+          [0.1, 0.7, 0.95, 0.75, 0.1],
+          [0.1, 0.4, 0.5, 0.4, 0.1],
+          [0.0, 0.1, 0.2, 0.1, 0.0]
+        ],
+        createdAt: '2026-08-21T09:15:10Z',
+      },
+      provenanceDetails: {
+        id: 'prov-002',
+        caseId: 'VF-2026-000125',
+        c2paValid: false,
+        issuer: 'Unsigned Local Export',
+        cameraMake: 'Apple',
+        cameraModel: 'iPhone 15 Pro (Forged EXIF Header)',
+        softwareHistory: ['Adobe Photoshop 25.1 (Windows)'],
+        exifData: {
+          Make: 'Apple',
+          Model: 'iPhone 15 Pro',
+          ISO: '100',
+          Software: 'Photoshop 2024'
+        }
+      },
+      createdAt: '2026-08-21T09:15:00Z',
+      updatedAt: '2026-08-21T09:15:10Z',
+    },
+    {
+      id: 'VF-2026-000126',
+      userId: 'usr-demo-002',
+      mediaId: 'med-003',
+      title: 'Wire Transfer Audio Instructions.wav',
+      verdict: 'INCONCLUSIVE',
+      confidence: 54,
+      authenticityScore: 46,
+      manipulationProbability: 54,
+      riskLevel: 'MEDIUM',
+      status: 'COMPLETED',
+      reviewRequired: false,
+      mediaFile: {
+        id: 'med-003',
+        filename: 'executive_voice_clone.wav',
+        mimeType: 'audio/wav',
+        sizeBytes: 4120000,
+        fileHash: '3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eee7935b20cb',
+        storageUrl: 'https://actions.google.com/sounds/v1/ambiences/office_noise.ogg',
+        createdAt: '2026-08-22T11:40:00Z',
+      },
+      detectionResults: {
+        id: 'det-003',
+        caseId: 'VF-2026-000126',
+        faceForgeryScore: 0,
+        temporalScore: 20,
+        audioVisualScore: 68,
+        metadataScore: 40,
+        provenanceStatus: 'UNAVAILABLE',
+        modelVersion: 'v2.4-ensemble-deepfake',
+        reasoningHighlights: [
+          'High ambient background noise reduces neural vocoder detection certainty below 80%.',
+          'Sharp frequency cutoff at 8kHz indicates GSM cell phone codec compression.',
+          'Pitch contour fluctuates within natural human speech bounds, but synthetic cadence detected.'
+        ],
+        waveformSegments: [
+          { startTimeSec: 0.5, endTimeSec: 2.1, anomalyScore: 0.42, label: 'Natural speech breathing' },
+          { startTimeSec: 3.2, endTimeSec: 5.8, anomalyScore: 0.61, label: 'Possible ElevenLabs synthetic artifact' }
+        ],
+        createdAt: '2026-08-22T11:40:12Z',
+      },
+      provenanceDetails: {
+        id: 'prov-003',
+        caseId: 'VF-2026-000126',
+        c2paValid: false,
+        softwareHistory: ['VoIP Recording Engine'],
+        exifData: {
+          AudioCodec: 'PCM 16-bit',
+          SampleRate: '44100 Hz',
+          Channels: 'Mono'
+        }
+      },
+      createdAt: '2026-08-22T11:40:00Z',
+      updatedAt: '2026-08-22T11:40:12Z',
+    },
+    {
+      id: 'VF-2026-000127',
+      userId: 'usr-demo-002',
+      mediaId: 'med-004',
+      title: 'Field Report Photo #401.png',
+      verdict: 'AUTHENTIC',
+      confidence: 96,
+      authenticityScore: 96,
+      manipulationProbability: 4,
+      riskLevel: 'LOW',
+      status: 'COMPLETED',
+      reviewRequired: false,
+      mediaFile: {
+        id: 'med-004',
+        filename: 'verified_news_photo.png',
+        mimeType: 'image/png',
+        sizeBytes: 5120000,
+        fileHash: '7b257a07746487e411b012356c54c30c80b6f9f257f864e26217e54f0a0d922f',
+        storageUrl: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80',
+        createdAt: '2026-08-23T16:10:00Z',
+      },
+      detectionResults: {
+        id: 'det-004',
+        caseId: 'VF-2026-000127',
+        faceForgeryScore: 4,
+        temporalScore: 3,
+        audioVisualScore: 2,
+        metadataScore: 98,
+        provenanceStatus: 'VERIFIED',
+        modelVersion: 'v2.4-ensemble-deepfake',
+        reasoningHighlights: [
+          'Hardware C2PA certificate cryptographically verified (Sony Alpha Security PKI).',
+          'Camera sensor Bayer pattern noise profile perfectly consistent across high-contrast areas.',
+          'Zero generative neural network artifacts found in spatial domain frequency distribution.'
+        ],
+        heatmapMatrix: [
+          [0.02, 0.01, 0.03, 0.02, 0.01],
+          [0.01, 0.04, 0.05, 0.03, 0.02],
+          [0.02, 0.03, 0.04, 0.03, 0.01],
+          [0.01, 0.02, 0.03, 0.02, 0.01],
+          [0.01, 0.01, 0.02, 0.01, 0.00]
+        ],
+        createdAt: '2026-08-23T16:10:14Z',
+      },
+      provenanceDetails: {
+        id: 'prov-004',
+        caseId: 'VF-2026-000127',
+        c2paValid: true,
+        issuer: 'Sony Alpha Security Authority',
+        signatureTimestamp: '2026-08-23T15:58:12Z',
+        cameraMake: 'Sony',
+        cameraModel: 'ILCE-7M4 (Alpha 7 IV)',
+        softwareHistory: ['Sony Hardware Firmware v2.00'],
+        exifData: {
+          Make: 'Sony',
+          Model: 'ILCE-7M4',
+          ExposureTime: '1/500 sec',
+          FNumber: 'f/2.8',
+          ISO: '400',
+          FocalLength: '50mm',
+          Lens: 'FE 24-70mm F2.8 GM'
+        },
+        chainOfCustody: [
+          { timestamp: '2026-08-23T15:58:12Z', action: 'Captured on Device with C2PA hardware seal', actor: 'Associated Press Journalist' },
+          { timestamp: '2026-08-23T16:10:00Z', action: 'Submitted to VERIFRAME Integrity Platform', actor: 'Alex Mercer' }
+        ]
+      },
+      createdAt: '2026-08-23T16:10:00Z',
+      updatedAt: '2026-08-23T16:10:14Z',
+    }
+  ];
+
+  private reviewCases: ReviewCase[] = [
+    {
+      id: 'rev-001',
+      caseId: 'VF-2026-000125',
+      reviewerId: 'usr-demo-001',
+      reviewerName: 'Dr. Sarah Vance',
+      status: 'IN_REVIEW',
+      reviewerVerdict: 'SUSPICIOUS',
+      notes: 'Undergoing secondary facial landmark analysis due to heavy lossy compression artifacts.',
+      createdAt: '2026-08-21T09:30:00Z',
+      updatedAt: '2026-08-21T09:30:00Z'
+    }
+  ];
+
+  private apiKeys: ApiKey[] = [
+    {
+      id: 'key-001',
+      name: 'Production FactCheck Bot',
+      keyPrefix: 'vf_live_9a8f...',
+      usageCount: 1420,
+      createdAt: '2026-05-10T12:00:00Z'
+    }
+  ];
+
+  public getAllCases(): AnalysisCase[] {
+    return this.cases;
+  }
+
+  public getCaseById(id: string): AnalysisCase | undefined {
+    return this.cases.find(c => c.id === id);
+  }
+
+  public addCase(newCase: AnalysisCase): AnalysisCase {
+    this.cases.unshift(newCase);
+    if (newCase.reviewRequired) {
+      this.reviewCases.unshift({
+        id: `rev-${Date.now().toString(36)}`,
+        caseId: newCase.id,
+        caseData: newCase,
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    }
+    return newCase;
+  }
+
+  public deleteCase(id: string): boolean {
+    const initialLen = this.cases.length;
+    this.cases = this.cases.filter(c => c.id !== id);
+    this.reviewCases = this.reviewCases.filter(r => r.caseId !== id);
+    return this.cases.length < initialLen;
+  }
+
+  public getAllReviews(): ReviewCase[] {
+    return this.reviewCases.map(rev => {
+      const parentCase = this.cases.find(c => c.id === rev.caseId);
+      return { ...rev, caseData: parentCase };
+    });
+  }
+
+  public updateReview(id: string, updates: Partial<ReviewCase>): ReviewCase | undefined {
+    const index = this.reviewCases.findIndex(r => r.id === id || r.caseId === id);
+    if (index === -1) return undefined;
+
+    this.reviewCases[index] = {
+      ...this.reviewCases[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (updates.reviewerVerdict) {
+      const parentCase = this.cases.find(c => c.id === this.reviewCases[index].caseId);
+      if (parentCase) {
+        parentCase.verdict = updates.reviewerVerdict;
+        parentCase.status = 'COMPLETED';
+        parentCase.updatedAt = new Date().toISOString();
+      }
+    }
+
+    return this.reviewCases[index];
+  }
+
+  public getStats(): AnalysisStats {
+    const total = this.cases.length + 2477; // Baseline added for SOC metrics realism
+    const manipulated = this.cases.filter(c => c.verdict === 'MANIPULATED').length + 338;
+    const suspicious = this.cases.filter(c => c.verdict === 'SUSPICIOUS').length + 184;
+    const authentic = this.cases.filter(c => c.verdict === 'AUTHENTIC').length + 1826;
+    const inconclusive = this.cases.filter(c => c.verdict === 'INCONCLUSIVE').length + 129;
+    const reviews = this.reviewCases.length + 37;
+
+    return {
+      totalAnalyses: total,
+      suspiciousCount: suspicious,
+      manipulatedCount: manipulated,
+      authenticCount: authentic,
+      inconclusiveCount: inconclusive,
+      humanReviewsCount: reviews,
+      avgProcessingTimeMs: 1420,
+      trendData: [
+        { date: 'Aug 20', analyses: 210, flagged: 32 },
+        { date: 'Aug 21', analyses: 340, flagged: 54 },
+        { date: 'Aug 22', analyses: 290, flagged: 41 },
+        { date: 'Aug 23', analyses: 410, flagged: 78 },
+        { date: 'Aug 24', analyses: 380, flagged: 62 },
+        { date: 'Aug 25', analyses: 510, flagged: 95 },
+        { date: 'Aug 26', analyses: 341, flagged: 48 },
+      ],
+      verdictDistribution: [
+        { name: 'Authentic', value: authentic, color: '#10b981' },
+        { name: 'Manipulated', value: manipulated, color: '#ef4444' },
+        { name: 'Suspicious', value: suspicious, color: '#f59e0b' },
+        { name: 'Inconclusive', value: inconclusive, color: '#6b7280' },
+      ]
+    };
+  }
+
+  public getApiKeys(): ApiKey[] {
+    return this.apiKeys;
+  }
+
+  public createApiKey(name: string): ApiKey {
+    const newKey: ApiKey = {
+      id: `key-${Date.now().toString(36)}`,
+      name,
+      keyPrefix: `vf_live_${Math.random().toString(36).substring(2, 6)}...`,
+      usageCount: 0,
+      createdAt: new Date().toISOString()
+    };
+    this.apiKeys.push(newKey);
+    return newKey;
+  }
+}
+
+export const MockStore = new MockStoreService();
